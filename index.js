@@ -410,6 +410,75 @@ app.get('/api/products', async (req, res) => {
     }
 });
 
+// Product schema
+const productSchema = new mongoose.Schema({
+    productID: String,
+    logo: String, // assuming logo will also be an image
+    image: String, // field for product image
+    metal: String,
+    color: String,
+    karat: String,
+    size: String,
+    mainDiamond: String,
+    sideStone: String,
+    productCost: Number,
+    remark: String,
+});
+
+const Product = mongoose.model('Product', productSchema);
+
+let counter = 1; // In-memory counter for simplicity
+
+// Add a new product (with image upload)
+app.post('/api/products', upload.single('image'), async (req, res) => {
+    const productID = `OD${counter.toString().padStart(3, '0')}`;
+    counter += 1;
+
+    // Create the product object with the uploaded image
+    const productData = {
+        ...req.body,
+        productID,
+        image: req.file ? req.file.path : null, // Save the image file path in the database
+    };
+
+    const product = new Product(productData);
+    await product.save();
+
+    res.status(200).json({ message: 'Product added successfully', productID });
+});
+
+// Get all products
+app.get('/api/products', async (req, res) => {
+    const products = await Product.find({});
+    res.status(200).json(products);
+});
+
+// Update a product
+app.put('/api/products/:productID', upload.single('image'), async (req, res) => {
+    const { productID } = req.params;
+    const updatedData = req.body;
+
+    if (req.file) {
+        updatedData.image = req.file.path; // Update image if a new one is uploaded
+    }
+
+    const product = await Product.findOneAndUpdate(
+        { productID },
+        updatedData,
+        { new: true }
+    );
+
+    res.status(200).json({ message: 'Product updated successfully', product });
+});
+
+// Delete a product
+app.delete('/api/products/:productID', async (req, res) => {
+    const { productID } = req.params;
+
+    const product = await Product.findOneAndDelete({ productID });
+
+    res.status(200).json({ message: 'Product deleted successfully', product });
+});
 
 app.listen(8000, () => {
     console.log('Server connected on port 8000');
